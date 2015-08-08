@@ -1,4 +1,5 @@
-# The hellomongo webapp dockerized
+# docker-hellorails
+A Ruby On Rails server dockerized
 
 boot2docker
 -----------
@@ -70,3 +71,4 @@ Included in this template are:
  * **CloudFormation** http://aws.amazon.com/cloudformation/
  * **Elastic Loadbalancers**, http://aws.amazon.com/elasticloadbalancing/
  * **Compute** http://aws.amazon.com/ec2/
+
