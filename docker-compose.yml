@@ -3,11 +3,8 @@ db:
   ports:
     - "5432"
 web:
-  #image: dcrbsltd/hellorails_web
-  build: web
-  command: bundle exec rails s -p 3000 -b '0.0.0.0'
-  volumes:
-    - .:/hellorails
+  image: dcrbsltd/hellorails_web
+  entrypoint: /docker-entrypoint.sh
   ports:
     - "80:3000"
   links:

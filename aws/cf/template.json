@@ -191,8 +191,8 @@
                 "SecurityGroupIngress": [
                     {
                         "IpProtocol": "tcp",
-                        "FromPort": "80",
-                        "ToPort": "80",
+                        "FromPort": "3000",
+                        "ToPort": "3000",
                         "SourceSecurityGroupOwnerId": {
                             "Fn::GetAtt": [
                                 "ElasticLoadBalancer",
@@ -216,8 +216,8 @@
                     },
                     {
                         "IpProtocol": "tcp",
-                        "FromPort": "80",
-                        "ToPort": "80",
+                        "FromPort": "3000",
+                        "ToPort": "3000",
                         "CidrIp": {
                             "Ref": "SSHLocation"
                         }
@@ -245,7 +245,17 @@
                 "Tags": [
                     {
                         "Key": "Name",
-                        "Value": "rails",
+                        "Value": {
+                            "Fn::Join": [
+                                ".",
+                                [
+                                    "hellorails.",
+                                    {
+                                        "Ref": "DNSDomain"
+                                    }
+                                ]
+                            ]
+                        },
                         "PropagateAtLaunch": "true"
                     }
                 ]
@@ -304,14 +314,14 @@
                 "HealthCheck": {
                     "HealthyThreshold": "2",
                     "Interval": "6",
-                    "Target": "HTTP:80/",
+                    "Target": "HTTP:3000/",
                     "Timeout": "3",
                     "UnhealthyThreshold": "3"
                 },
                 "CrossZone": "true",
                 "Listeners": [
                     {
-                        "InstancePort": "80",
+                        "InstancePort": "3000",
                         "InstanceProtocol": "HTTP",
                         "LoadBalancerPort": "80",
                         "Protocol": "HTTP"
@@ -328,17 +338,30 @@
                 "ContainerDefinitions": [
                     {
                         "Name": "rails",
-                        "Image": "rails",
-                        "Essential": true,
-                        "Cpu": 10,
-                        "Memory": 384,
+                        "Image": "dcrbsltd/hellorails_web",
+                        "Essential": "true",
+                        "Cpu": "10",
+                        "Memory": "384",
                         "Links": [
-                            "mongo"
+                            "db"
                         ],
                         "PortMappings": [
                             {
-                                "ContainerPort": 3000,
-                                "HostPort": 80
+                                "ContainerPort": "3000",
+                                "HostPort": "3000"
+                            }
+                        ]
+                    },
+                    {
+                        "Name": "db",
+                        "Image": "postgres",
+                        "Essential": "true",
+                        "Cpu": "10",
+                        "Memory": "384",
+                        "PortMappings": [
+                            {
+                                "ContainerPort": "5432",
+                                "HostPort": "5432"
                             }
                         ]
                     }
@@ -356,7 +379,7 @@
                 "LoadBalancers": [
                     {
                         "ContainerName": "rails",
-                        "ContainerPort": 3000,
+                        "ContainerPort": "3000",
                         "LoadBalancerName": {
                             "Ref": "ElasticLoadBalancer"
                         }

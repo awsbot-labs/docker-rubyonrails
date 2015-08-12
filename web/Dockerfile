@@ -7,4 +7,5 @@ RUN rails new . --force --database=postgresql --skip-bundle
 ADD Gemfile /hellorails/Gemfile
 ADD database.yml /hellorails/config/database.yml
 RUN bundle install
-RUN rake db:create
+COPY ./docker-entrypoint.sh /
+ENTRYPOINT ["/docker-entrypoint.sh"]
