@@ -1,0 +1,61 @@
+#!/bin/bash
+set -e
+
+PORT=3000
+APP=RubyOnRails
+
+function abort()
+{
+	echo "$@"
+	exit 1
+}
+
+function cleanup()
+{
+	echo " --> Stopping container"
+	docker stop $ID >/dev/null
+	docker rm $ID >/dev/null
+}
+
+PWD=`pwd`
+
+echo " --> Starting container"
+ID=`docker run -d -p $PORT:$PORT $NAME:$VERSION`
+sleep 1
+
+echo " --> Verifying container"
+docker ps -q | grep ^${ID:0:12} > /dev/null
+if [ $? -ne 0 ]; then
+	abort "Unable to verify container IP"
+else
+  echo " --> Container verifyied"
+fi
+
+trap cleanup EXIT
+
+echo " --> Running tests"
+
+echo " --> Checking $APP process"
+docker exec -it $ID ps -ef | grep unicorn > /dev/null
+if [ $? -ne 0 ]; then
+	abort "No $APP Process running"
+else
+  echo " --> $APP is running"
+fi
+
+echo " --> Checking HTTP port $PORT, please wait"
+sleep 30
+curl -s http://$(docker-machine ip default):$PORT > /dev/null
+
+if [ $? -ne 0 ]; then
+	abort "$APP is not open on 3000"
+else
+  echo " --> Connected on port $PORT"
+fi
+
+if [ $? -ne 0 ]; then
+	abort "$APP is not open on $PORT"
+else
+  echo " --> Connected on port $PORT"
+fi
+

@@ -1,4 +1,7 @@
-NAME = dcrbsltd/rubyonrails
+APP = rubyonrails
+MAINTAINER = dcrbsltd
+NAME = $(MAINTAINER)/$(APP)
+PORT = 3000
 VERSION = 1
 .PHONY: all build clean test tag_latest release
 
@@ -14,7 +17,10 @@ clean:
 	@docker rmi -f `docker images -q` ||:
 
 test:
-	env NAME=$(NAME) VERSION=$(VERSION) ./test
+	env PORT=$(PORT) APP=$(APP) NAME=$(NAME) VERSION=$(VERSION) ./test
+
+deploy:
+	
 
 tag_latest:
 	docker tag -f $(NAME):$(VERSION) $(NAME):latest
