@@ -1,7 +1,7 @@
 development: &default
   adapter: postgresql
   encoding: unicode
-  database: postgres
+  database: development
   pool: 5
   username: postgres
   password:
@@ -9,8 +9,8 @@ development: &default
 
 test:
   <<: *default
-  database: hellorails_test
+  database: test
   
 production:
   <<: *default
-  database: hellorails_production
+  database: production

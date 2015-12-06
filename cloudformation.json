@@ -338,7 +338,7 @@
                 "ContainerDefinitions": [
                     {
                         "Name": "rails",
-                        "Image": "dcrbsltd/hellorails_web",
+                        "Image": "dcrbsltd/rubyonrails",
                         "Essential": "true",
                         "Cpu": "10",
                         "Memory": "384",
