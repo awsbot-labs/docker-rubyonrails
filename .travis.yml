@@ -1,7 +1,8 @@
 language: bash
 sudo: required
 before_install:
-  - sudo apt-get install python-pip
+  - sudo apt-get update -y
+  - sudo apt-get install -y python-pip
   - sudo pip install awscli
 script:
   - make test ENV=cloud
