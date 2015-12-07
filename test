@@ -67,7 +67,8 @@ if [ "$ENV" == "local" ]; then
 else
 
   echo " --> Uploading template to S3 Bucket"
-  aws s3 cp cloudformation.json s3://${CF_BUCKET}/${APP_NAME}.json > /dev/null 2>&1
+  echo "aws s3 cp cloudformation.json s3://${CF_BUCKET}/${APP_NAME}.json"
+  aws s3 cp cloudformation.json s3://${CF_BUCKET}/${APP_NAME}.json #> /dev/null 2>&1
 
   echo " --> Creating Cloudformation stack"
   # Creates a CloudFormation stack for the s3 bucket website
@@ -80,7 +81,7 @@ else
   ParameterKey=KeyName,ParameterValue=default \
   ParameterKey=AppName,ParameterValue=$APP_NAME \
   ParameterKey=DNSDomain,ParameterValue=$DNS_DOMAIN \
-  > /dev/null 2>&1
+  #> /dev/null 2>&1
 
   echo " --> Watching stack progress, please wait..."
   STACK_STATUS=CREATE_IN_PROGRESS

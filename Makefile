@@ -19,7 +19,7 @@ clean:
 	@docker rmi -f `docker images -q` ||:
 
 test:
-	env CF_BUCKET=$(CF_BUCKET) ENV=$(ENV) PORT=$(PORT) APP_NAME=$(APP_NAME) NAME=$(NAME) VERSION=$(VERSION) ./test
+	env ENV=$(ENV) PORT=$(PORT) APP_NAME=$(APP_NAME) NAME=$(NAME) VERSION=$(VERSION) ./test
 
 deploy:
 	
