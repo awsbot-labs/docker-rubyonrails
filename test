@@ -1,9 +1,6 @@
 #!/bin/bash
 set -e
 
-PORT=3000
-APP=RubyOnRails
-
 function abort()
 {
 	echo "$@"
@@ -12,50 +9,96 @@ function abort()
 
 function cleanup()
 {
-	echo " --> Stopping container"
-	docker stop $ID >/dev/null
-	docker rm $ID >/dev/null
+  echo " --> Cleaning up"
+  if [ "$ENV" == "local" ]; then
+  	echo " --> Stopping container"
+  	docker stop $ID >/dev/null
+  	docker rm $ID >/dev/null
+  else
+    echo " --> Deleting CloudFormation stack"
+    aws cloudformation delete-stack --stack-name $STACK_NAME > /dev/null 2>&1
+  fi
+  echo "Finished at $(date -u +%Y-%m-%dT%H:%M:%S%z)"
 }
 
-PWD=`pwd`
-
-echo " --> Starting container"
-ID=`docker run -d -p $PORT:$PORT $NAME:$VERSION`
-sleep 1
-
-echo " --> Verifying container"
-docker ps -q | grep ^${ID:0:12} > /dev/null
-if [ $? -ne 0 ]; then
-	abort "Unable to verify container IP"
-else
-  echo " --> Container verifyied"
-fi
-
+echo "Started at $(date -u +%Y-%m-%dT%H:%M:%S%z)"
 trap cleanup EXIT
+export PWD=`pwd`
 
-echo " --> Running tests"
-
-echo " --> Checking $APP process"
-docker exec -it $ID ps -ef | grep unicorn > /dev/null
-if [ $? -ne 0 ]; then
-	abort "No $APP Process running"
-else
-  echo " --> $APP is running"
+if [ -e "vars" ]; then
+  source "vars"
 fi
 
-echo " --> Checking HTTP port $PORT, please wait"
-sleep 30
-curl -s http://$(docker-machine ip default):$PORT > /dev/null
+export STACK_NAME=$APP_NAME-`echo $DNS_DOMAIN | sed -e 's/\./\-/g'`
+export IPADDRESS=`curl -s http://whatismijnip.nl | cut -d " " -f 5`
 
-if [ $? -ne 0 ]; then
-	abort "$APP is not open on 3000"
+if [ "$ENV" == "local" ]; then
+  echo " --> Starting container"
+  export ID=`docker run -d -p $PORT:3000 $NAME:$VERSION`
+  sleep 1
+
+  echo " --> Verifying container"
+  docker ps -q | grep ^${ID:0:12} > /dev/null
+  if [ $? -ne 0 ]; then
+  	abort "Unable to verify container IP"
+  else
+    echo " --> Container verified"
+  fi
+
+  echo " --> Running tests"
+
+  echo " --> Checking $APP_NAME process"
+  docker exec -it $ID ps -ef | grep rails > /dev/null
+  if [ $? -ne 0 ]; then
+  	abort "No $APP_NAME Process running"
+  else
+    echo " --> $APP_NAME is running"
+  fi
+
+  echo " --> Checking HTTP port $PORT, please wait"
+  sleep 5
+  curl -s http://$(docker-machine ip default) > /dev/null
+
+  if [ $? -ne 0 ]; then
+  	abort "$APP_NAME is not open on $PORT"
+  else
+    echo " --> Connected on port $PORT"
+  fi
 else
-  echo " --> Connected on port $PORT"
-fi
 
-if [ $? -ne 0 ]; then
-	abort "$APP is not open on $PORT"
-else
-  echo " --> Connected on port $PORT"
-fi
+  echo " --> Uploading template to S3 Bucket"
+  aws s3 cp cloudformation.json s3://${CF_BUCKET}/${APP_NAME}.json > /dev/null 2>&1
 
+  echo " --> Creating Cloudformation stack"
+  # Creates a CloudFormation stack for the s3 bucket website
+  aws cloudformation create-stack \
+        --stack-name $STACK_NAME \
+        --template-url https://s3-eu-west-1.amazonaws.com/${CF_BUCKET}/${APP_NAME}.json \
+        --capabilities CAPABILITY_IAM \
+        --parameters \
+  ParameterKey=SSHLocation,ParameterValue="$IPADDRESS/32" \
+  ParameterKey=KeyName,ParameterValue=default \
+  ParameterKey=AppName,ParameterValue=$APP_NAME \
+  ParameterKey=DNSDomain,ParameterValue=$DNS_DOMAIN \
+  > /dev/null 2>&1
+
+  echo " --> Watching stack progress, please wait..."
+  STACK_STATUS=CREATE_IN_PROGRESS
+  while [ "$STACK_STATUS" == "CREATE_IN_PROGRESS" ]; do
+    STACK_STATUS=`aws cloudformation describe-stacks --stack-name $STACK_NAME --query Stacks[*].StackStatus --output text`
+    if [[ ( "$STACK_STATUS" == "CREATE_COMPLETE" ) || ( "$STACK_STATUS" == "DELETE_COMPLETE" ) || ( "$STACK_STATUS" == "DELETE_FAILED" ) ]]; then
+      break
+    elif [[ ("$STACK_STATUS" == "CREATE_FAILED") ]]; then
+      exit 1
+    fi
+    sleep 3
+  done
+
+  MSG="Checking Website"
+  echo " --> $MSG"
+  sleep 61
+  curl -s -k -L http://$APP_NAME.$DNS_DOMAIN | grep "rails" > /dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    abort $MSG
+  fi
+fi

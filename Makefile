@@ -1,8 +1,10 @@
-APP = rubyonrails
+APP_NAME = rubyonrails
 MAINTAINER = dcrbsltd
-NAME = $(MAINTAINER)/$(APP)
-PORT = 3000
+NAME = $(MAINTAINER)/$(APP_NAME)
+PORT = 80
 VERSION = 1
+ENV ?= local
+DATE = $(shell date)
 .PHONY: all build clean test tag_latest release
 
 all: build
@@ -17,17 +19,15 @@ clean:
 	@docker rmi -f `docker images -q` ||:
 
 test:
-	env PORT=$(PORT) APP=$(APP) NAME=$(NAME) VERSION=$(VERSION) ./test
+	env ENV=$(ENV) PORT=$(PORT) APP_NAME=$(APP_NAME) NAME=$(NAME) VERSION=$(VERSION) ./test
 
 deploy:
 	
-
 tag_latest:
 	docker tag -f $(NAME):$(VERSION) $(NAME):latest
 
 docker_release: test tag_latest
 	@if ! docker images $(NAME) | awk '{ print $$2 }' | grep -q -F $(VERSION); then echo "$(NAME) version $(VERSION) is not yet built. Please run 'make build'"; false; fi
-	@if ! head -n 1 Changelog.md | grep -q 'release date'; then echo 'Please note the release date in Changelog.md.' && false; fi
 	docker push $(NAME)
 	@echo "*** Don't forget to create a tag. git tag rel-$(VERSION) && git push origin rel-$(VERSION)"
 

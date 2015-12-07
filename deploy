@@ -1,0 +1,17 @@
+#!/bin/bash
+if [ $# -eq 0 ]; then
+  echo "Usage: $0 create|update <SSH_KEYNAME> <APP_NAME> <DNSDOMAIN>"
+  echo "e.g. $0 create MyAWSKey rubyonrails example.com"
+  exit 1
+else
+  STACK_NAME=`echo $4 | sed -e 's/\./\-/g'`
+  
+  # Sets your external IP
+  IPADDRESS=`wget -qO- http://ipecho.net/plain ; echo -n`
+
+  aws cloudformation $1-stack \
+    --stack-name $3-$STACK_NAME \
+    --template-body file://aws/cf/template.json \
+    --capabilities CAPABILITY_IAM \
+    --parameters ParameterKey=SSHLocation,ParameterValue="$IPADDRESS/32" ParameterKey=KeyName,ParameterValue=$2 ParameterKey=AppName,ParameterValue=$3 ParameterKey=DNSDomain,ParameterValue=$4
+fi

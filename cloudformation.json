@@ -1,9 +1,19 @@
 {
     "AWSTemplateFormatVersion": "2010-09-09",
-    "Description": "Creates the hellorails application.",
+    "Description": "Creates a RubyOnRails application as an AutoScaled ECS cluster service.",
     "Parameters": {
+        "AppName": {
+            "Description": "Name of the application",
+            "Default": "rubyonrails",
+            "Type": "String",
+            "MinLength": "1",
+            "MaxLength": "64",
+            "AllowedPattern": "[-_ a-zA-Z0-9]*",
+            "ConstraintDescription": "can contain only alphanumeric characters, spaces, dashes and underscores."
+        },
         "KeyName": {
             "Description": "Name of an existing EC2 KeyPair to enable SSH access to the instances",
+            "Default": "default",
             "Type": "String",
             "MinLength": "1",
             "MaxLength": "64",
@@ -12,6 +22,12 @@
         },
         "DNSDomain": {
             "Description": "DNS Name for the Application",
+            "Default": "awsbot.com",
+            "Type": "String"
+        },
+        "DockerImage": {
+            "Description": "DNS Name for the Application",
+            "Default": "dcrbsltd/rubyonrails:1",
             "Type": "String"
         },
         "SSHLocation": {
@@ -95,7 +111,7 @@
                 "Path": "/",
                 "Policies": [
                     {
-                        "PolicyName": "hellorails-instance-role-policy",
+                        "PolicyName": "instance-role-policy",
                         "PolicyDocument": {
                             "Version": "2012-10-17",
                             "Statement": [
@@ -128,7 +144,7 @@
             "Type": "AWS::IAM::Policy",
             "DependsOn": "EC2InstanceRole",
             "Properties": {
-                "PolicyName": "hellorails-iam-policy",
+                "PolicyName": "ecs-iam-policy",
                 "PolicyDocument": {
                     "Statement": [
                         {
@@ -249,7 +265,9 @@
                             "Fn::Join": [
                                 ".",
                                 [
-                                    "hellorails.",
+                                    {
+                                        "Ref": "AppName"
+                                    },
                                     {
                                         "Ref": "DNSDomain"
                                     }
@@ -307,7 +325,9 @@
         "ElasticLoadBalancer": {
             "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
             "Properties": {
-                "LoadBalancerName": "hellorails",
+                "LoadBalancerName": {
+                    "Ref": "AppName"
+                },
                 "AvailabilityZones": {
                     "Fn::GetAZs": ""
                 },
@@ -338,30 +358,16 @@
                 "ContainerDefinitions": [
                     {
                         "Name": "rails",
-                        "Image": "dcrbsltd/rubyonrails",
+                        "Image": {
+                          "Ref": "DockerImage"
+                        },
                         "Essential": "true",
                         "Cpu": "10",
                         "Memory": "384",
-                        "Links": [
-                            "db"
-                        ],
                         "PortMappings": [
                             {
                                 "ContainerPort": "3000",
                                 "HostPort": "3000"
-                            }
-                        ]
-                    },
-                    {
-                        "Name": "db",
-                        "Image": "postgres",
-                        "Essential": "true",
-                        "Cpu": "10",
-                        "Memory": "384",
-                        "PortMappings": [
-                            {
-                                "ContainerPort": "5432",
-                                "HostPort": "5432"
                             }
                         ]
                     }
@@ -414,7 +420,10 @@
                             "Fn::Join": [
                                 "",
                                 [
-                                    "hellorails.",
+                                    {
+                                        "Ref": "AppName"
+                                    },
+                                    ".",
                                     {
                                         "Ref": "DNSDomain"
                                     },
